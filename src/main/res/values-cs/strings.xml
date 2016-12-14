@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ble_not_supported">BLE není podporováno</string>
+    <string name="label_state">Stav:</string>
+    <string name="label_opening">Otevírání…</string>
+    <string name="label_closing">Zavírání…</string>
+    <string name="connected">Červí díra stabilní</string>
+    <string name="connecting">Zadávám adresu</string>
+    <string name="disconnected">Spojení ztraceno</string>
+    <string name="error_bluetooth_not_supported">Bluetooth není podporováno.</string>
+
+    <!-- Menu items -->
+    <string name="menu_connect">Připojit</string>
+    <string name="menu_disconnect">Odpojit</string>
+
+    <string name="btn_open">Otevřít bránu</string>
+    <string name="btn_close">Zavřít bránu</string>
+</resources>

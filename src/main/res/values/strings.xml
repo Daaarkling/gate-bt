@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ble_not_supported">BLE is not supported</string>
+    <string name="label_state">State:</string>
+    <string name="label_opening">Opening…</string>
+    <string name="label_closing">Closing…</string>
+    <string name="connected">Wormhole stable</string>
+    <string name="connecting">Entering address</string>
+    <string name="disconnected">Wormhole lost</string>
+    <string name="title_devices">BLE Device Scan</string>
+    <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
+
+    <!-- Menu items -->
+    <string name="menu_connect">Connect</string>
+    <string name="menu_disconnect">Disconnect</string>
+
+    <string name="btn_open">Open gate</string>
+    <string name="btn_close">Close gate</string>
+</resources>
