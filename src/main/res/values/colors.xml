@@ -4,5 +4,8 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
     <color name="colorTextFAB">#FFFFFF</color>
-    <color name="green">#4CAF50</color>
+    <color name="btnGreen">#4CAF50</color>
+    <color name="btnRed">#C62828</color>
+    <color name="btnBlue">#2196F3</color>
+    <color name="btnOrange">#FF9800</color>
 </resources>

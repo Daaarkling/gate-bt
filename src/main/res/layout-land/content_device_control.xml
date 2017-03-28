@@ -37,7 +37,7 @@
         </LinearLayout>
 
         <android.support.v7.widget.AppCompatButton
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="0dp"
             android:text="@string/btn_connect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -46,7 +46,7 @@
             style="@style/BtnConnect"/>
 
         <android.support.v7.widget.AppCompatButton
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="0dp"
             android:text="@string/btn_disconnect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -55,10 +55,10 @@
             style="@style/BtnDisconnect"/>
 
         <android.support.v7.widget.AppCompatButton
-            android:layout_marginTop="60dp"
+            android:layout_marginTop="25dp"
             android:text="@string/btn_open"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="60dp"
             android:enabled="false"
             android:id="@+id/btn_open"
             style="@style/BtnOpen"/>
@@ -67,7 +67,7 @@
             android:layout_marginTop="10dp"
             android:text="@string/btn_close"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="60dp"
             android:enabled="false"
             android:id="@+id/btn_close"
             style="@style/BtnClose"/>
