@@ -25,39 +25,39 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-/**
- * For a given BLE device, this Activity provides the user interface to connect, display data,
- * and display GATT services and characteristics supported by the device.  The Activity
- * communicates with {@code BluetoothLeService}, which in turn interacts with the
- * Bluetooth LE API.
- */
-public class DeviceControlActivity extends AppCompatActivity {
+
+public class DeviceControlActivity extends AppCompatActivity implements AlertFragment.NoticeDialogListener {
 
     private final static String TAG = GattAttributes.NAME;
+    public static final String SECURE_KEY_TAG = "secureKey";
+    public final static String STORAGE = "secure";
 
     private TextView mConnectionState;
     private BluetoothLeService mBluetoothLeService;
     private BluetoothAdapter mBluetoothAdapter;
     private boolean mConnected = false;
     private static final int REQUEST_ENABLE_BT = 1;
+    private String mSecureKey = GattAttributes.SECURE_KEY;
 
-    private Button mBtnOpen, mBtnClose, mBtnConnect, mBtnDisconnect;
+    private Button mBtnOpen, mBtnClose, mBtnConnect, mBtnDisconnect, mBtnSettings;
 
 
     // Code to manage Service lifecycle.
@@ -82,12 +82,8 @@ public class DeviceControlActivity extends AppCompatActivity {
         }
     };
 
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_WRITE: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-    //                        or notification operations.
+
+
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -109,6 +105,9 @@ public class DeviceControlActivity extends AppCompatActivity {
                 enableDisableButtons();
             } else if (BluetoothLeService.ACTION_GATT_WRITE.equals(action)) {
                 // DATA WRITTEN
+            } else if (BluetoothLeService.ACTION_GATT_NOTHING_FOUND.equals(action)) {
+                updateConnectionState(R.string.disconnected);
+                enableDisableButtons();
             }
         }
     };
@@ -131,7 +130,7 @@ public class DeviceControlActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_device_control);
+        setContentView(R.layout.activity_device_control_with_toolbar);
 
         // Use this check to determine whether BLE is supported on the device.  Then you can
         // selectively disable BLE-related features.
@@ -152,12 +151,21 @@ public class DeviceControlActivity extends AppCompatActivity {
             return;
         }
 
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
         // Sets up UI references.
         mConnectionState = (TextView) findViewById(R.id.connection_state);
 
+        // Load secure key from storage
+        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
+        mSecureKey = sharedPreferences.getString(SECURE_KEY_TAG, GattAttributes.SECURE_KEY);
+
+        // Bind service
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
+        // Init buttons
         mBtnConnect = (Button) findViewById(R.id.btn_connect);
         mBtnDisconnect = (Button) findViewById(R.id.btn_disconnect);
         mBtnOpen = (Button) findViewById(R.id.btn_open);
@@ -183,7 +191,7 @@ public class DeviceControlActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (mConnected){
-                    mBluetoothLeService.writeCharacteristic(GattAttributes.COMMAND_OPEN);
+                    mBluetoothLeService.writeCharacteristic(concatCmdAndKey(mSecureKey, GattAttributes.COMMAND_OPEN));
                     Log.d(TAG, "Writing data: " + GattAttributes.COMMAND_OPEN);
                 }
             }
@@ -193,11 +201,27 @@ public class DeviceControlActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (mConnected) {
-                    mBluetoothLeService.writeCharacteristic(GattAttributes.COMMAND_CLOSE);
+                    mBluetoothLeService.writeCharacteristic(concatCmdAndKey(mSecureKey, GattAttributes.COMMAND_CLOSE));
                     Log.d(TAG, "Writing data: " + GattAttributes.COMMAND_CLOSE);
                 }
             }
         });
+    }
+
+    private String concatCmdAndKey(String key, String cmd) {
+        return key + GattAttributes.SECURE_SPLITTER + cmd;
+    }
+
+
+    @Override
+    public void onDialogPositiveClick(String key) {
+
+        SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(SECURE_KEY_TAG, key);
+        editor.commit();
+
+        mSecureKey = key;
     }
 
     @Override
@@ -274,9 +298,29 @@ public class DeviceControlActivity extends AppCompatActivity {
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTING);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_WRITE);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_NOTHING_FOUND);
         return intentFilter;
     }
 
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
 
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.gatt_services, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()) {
+            case R.id.menu_settings:
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                AlertFragment alertFragment = new AlertFragment();
+                alertFragment.show(fragmentManager, "alert");
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
 }

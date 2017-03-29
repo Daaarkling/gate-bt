@@ -29,6 +29,9 @@ public class GattAttributes {
     public static final UUID UUID_CHAR = UUID.fromString(GATT_CHAR);
     public static final UUID UUID_SERVICE = UUID.fromString(GATT_SERVICE);
 
+    public static final String SECURE_KEY = "mpc";
+    public static final String SECURE_SPLITTER = ":";
+
     public final static String COMMAND_OPEN = "1";
     public final static String COMMAND_CLOSE = "0";
 }

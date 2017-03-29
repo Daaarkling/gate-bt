@@ -32,10 +32,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 
@@ -51,7 +47,7 @@ public class BluetoothLeService extends Service {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
-    private List<BluetoothDevice> mDeviceList = new ArrayList<>();
+    private Handler mStopScanningHandler;
 
     private int mConnectionState = STATE_DISCONNECTED;
     private static final int STATE_DISCONNECTED = 0;
@@ -61,6 +57,7 @@ public class BluetoothLeService extends Service {
     public final static String ACTION_GATT_CONNECTED = "cz.janvanura.gate-bt.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_CONNECTING = "cz.janvanura.gate-bt.ACTION_GATT_CONNECTING";
     public final static String ACTION_GATT_DISCONNECTED = "cz.janvanura.gate-bt.ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_GATT_NOTHING_FOUND = "cz.janvanura.gate-bt.ACTION_GATT_NOTHING_FOUND";
     public final static String ACTION_GATT_WRITE = "cz.janvanura.gate-bt.ACTION_GATT_WRITE";
 
 
@@ -162,29 +159,24 @@ public class BluetoothLeService extends Service {
     private void startScanning() {
 
         // Stops scanning after a pre-defined scan period.
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
+        mStopScanningHandler = new Handler();
+        mStopScanningHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                stopScanning(true);
+                stopScanning();
+                Log.i(TAG, "No devices found.");
             }
         }, 10000);
+
         mBluetoothAdapter.startLeScan(mLeScanCallback);
         Log.d(TAG, "Scanning started");
     }
 
-    private void stopScanning(boolean nothingFound) {
-        if (nothingFound) {
-            mConnectionState = STATE_DISCONNECTED;
-            Log.i(TAG, "No devices found.");
-            broadcastUpdate(ACTION_GATT_DISCONNECTED);
-        }
-        stopScanning();
-    }
 
     private void stopScanning() {
         try {
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            broadcastUpdate(ACTION_GATT_NOTHING_FOUND);
             Log.d(TAG, "Scanning stopped");
         } catch (NullPointerException exception) {
             Log.e(TAG, "Can't stop scan. Unexpected NullPointerException", exception);
@@ -200,6 +192,7 @@ public class BluetoothLeService extends Service {
                 public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
                     if (device.getAddress().equals(mBluetoothDeviceAddress)) {
                         stopScanning();
+                        mStopScanningHandler.removeCallbacksAndMessages(null);
                         conn(device.getAddress());
                     }
                 }
@@ -309,16 +302,9 @@ public class BluetoothLeService extends Service {
         }
 
         Log.i(TAG, "characteristic " + characteristic.toString());
-        try {
-            String dataEncoded = URLEncoder.encode(data, "utf-8");
-
-            Log.i(TAG, "data " + dataEncoded);
-            characteristic.setValue(dataEncoded);
-            mBluetoothGatt.writeCharacteristic(characteristic);
-
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
+        Log.i(TAG, "data " + data);
+        characteristic.setValue(data);
+        mBluetoothGatt.writeCharacteristic(characteristic);
     }
 
     public BluetoothGattCharacteristic findCharacteristic(final UUID uuid) {

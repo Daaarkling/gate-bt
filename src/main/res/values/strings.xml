@@ -8,10 +8,14 @@
     <string name="connected">Connected</string>
     <string name="connecting">Connecting…</string>
     <string name="disconnected">Disconnected</string>
-    <string name="title_devices">BLE Device Scan</string>
     <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
     <string name="btn_connect">Connect</string>
     <string name="btn_disconnect">Disconnect</string>
     <string name="btn_open">Open gate</string>
     <string name="btn_close">Close gate</string>
+    <string name="btn_settings_cancel">Cancel</string>
+    <string name="btn_settings_confirm">Confirm</string>
+    <string name="settings_dialog_title">Add secure key</string>
+    <string name="settings_dialog_key">Key</string>
+    <string name="menu_btn_secure_key">Key</string>
 </resources>
