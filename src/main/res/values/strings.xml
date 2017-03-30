@@ -15,7 +15,12 @@
     <string name="btn_close">Close gate</string>
     <string name="btn_settings_cancel">Cancel</string>
     <string name="btn_settings_confirm">Confirm</string>
-    <string name="settings_dialog_title">Add secure key</string>
-    <string name="settings_dialog_key">Key</string>
-    <string name="menu_btn_secure_key">Key</string>
+    <string name="change_key_dialog_title">Change secure key</string>
+    <string name="reset_key_dialog_title">Reset secure key</string>
+    <string name="secure_key">Secure key</string>
+    <string name="secure_key_new">New secure key</string>
+    <string name="master_key">Master key</string>
+    <string name="flesh_change_key">Secure key was changed!</string>
+    <string name="flesh_reset_key">Secure key was reset!</string>
+    <string name="flesh_change_key_empty">Secure key can not be empty!</string>
 </resources>

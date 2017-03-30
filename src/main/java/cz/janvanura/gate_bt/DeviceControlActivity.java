@@ -44,11 +44,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
-public class DeviceControlActivity extends AppCompatActivity implements AlertFragment.NoticeDialogListener {
+public class DeviceControlActivity extends AppCompatActivity implements ChangeKeyFragment.NoticeDialogListener, ResetKeyFragment.NoticeDialogListener {
 
     private final static String TAG = GattAttributes.NAME;
     public static final String SECURE_KEY_TAG = "secureKey";
-    public final static String STORAGE = "secure";
 
     private TextView mConnectionState;
     private BluetoothLeService mBluetoothLeService;
@@ -57,7 +56,7 @@ public class DeviceControlActivity extends AppCompatActivity implements AlertFra
     private static final int REQUEST_ENABLE_BT = 1;
     private String mSecureKey = GattAttributes.SECURE_KEY;
 
-    private Button mBtnOpen, mBtnClose, mBtnConnect, mBtnDisconnect, mBtnSettings;
+    private Button mBtnOpen, mBtnClose, mBtnConnect, mBtnDisconnect;
 
 
     // Code to manage Service lifecycle.
@@ -104,13 +103,30 @@ public class DeviceControlActivity extends AppCompatActivity implements AlertFra
                 updateConnectionState(R.string.disconnected);
                 enableDisableButtons();
             } else if (BluetoothLeService.ACTION_GATT_WRITE.equals(action)) {
-                // DATA WRITTEN
+                // write
             } else if (BluetoothLeService.ACTION_GATT_NOTHING_FOUND.equals(action)) {
                 updateConnectionState(R.string.disconnected);
                 enableDisableButtons();
+            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                String data = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
+                resolveDataAvailable(data);
             }
         }
     };
+
+
+    private void resolveDataAvailable(String data) {
+
+        String[] msg = data.split(":");
+
+        if (msg[0].equals("reset")) {
+            String key = data.split(":")[1];
+            changeSecureKey(key);
+            Toast.makeText(DeviceControlActivity.this, R.string.flesh_change_key, Toast.LENGTH_SHORT).show();
+        } else if (msg[0].equals("error")) {
+            Toast.makeText(DeviceControlActivity.this, msg[1], Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private void enableDisableButtons() {
 
@@ -191,7 +207,7 @@ public class DeviceControlActivity extends AppCompatActivity implements AlertFra
             @Override
             public void onClick(View v) {
                 if (mConnected){
-                    mBluetoothLeService.writeCharacteristic(concatCmdAndKey(mSecureKey, GattAttributes.COMMAND_OPEN));
+                    mBluetoothLeService.writeCharacteristic(concatStrings(mSecureKey, GattAttributes.COMMAND_OPEN));
                     Log.d(TAG, "Writing data: " + GattAttributes.COMMAND_OPEN);
                 }
             }
@@ -201,27 +217,53 @@ public class DeviceControlActivity extends AppCompatActivity implements AlertFra
             @Override
             public void onClick(View v) {
                 if (mConnected) {
-                    mBluetoothLeService.writeCharacteristic(concatCmdAndKey(mSecureKey, GattAttributes.COMMAND_CLOSE));
+                    mBluetoothLeService.writeCharacteristic(concatStrings(mSecureKey, GattAttributes.COMMAND_CLOSE));
                     Log.d(TAG, "Writing data: " + GattAttributes.COMMAND_CLOSE);
                 }
             }
         });
     }
 
-    private String concatCmdAndKey(String key, String cmd) {
+    private String concatStrings(String key, String cmd) {
         return key + GattAttributes.SECURE_SPLITTER + cmd;
     }
 
 
     @Override
-    public void onDialogPositiveClick(String key) {
+    public void onChangeKey(String key) {
 
+        if (key.isEmpty()) {
+            Toast.makeText(this, R.string.flesh_change_key_empty, Toast.LENGTH_SHORT).show();
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            ChangeKeyFragment changeKeyFragment = new ChangeKeyFragment();
+            changeKeyFragment.show(fragmentManager, "change");
+            return;
+        }
+        changeSecureKey(key);
+        Toast.makeText(this, R.string.flesh_change_key, Toast.LENGTH_SHORT).show();
+    }
+
+    private void changeSecureKey(String key) {
         SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(SECURE_KEY_TAG, key);
-        editor.commit();
-
+        editor.apply();
         mSecureKey = key;
+    }
+
+
+    @Override
+    public void onResetKey(String masterKey, String secureKey) {
+
+        if (secureKey.isEmpty()) {
+            Toast.makeText(this, R.string.flesh_change_key_empty, Toast.LENGTH_SHORT).show();
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            ResetKeyFragment resetKeyFragment = new ResetKeyFragment();
+            resetKeyFragment.show(fragmentManager, "reset");
+            return;
+        }
+
+        mBluetoothLeService.writeCharacteristic(concatStrings(masterKey, secureKey));
     }
 
     @Override
@@ -299,6 +341,7 @@ public class DeviceControlActivity extends AppCompatActivity implements AlertFra
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTING);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_WRITE);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_NOTHING_FOUND);
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         return intentFilter;
     }
 
@@ -314,11 +357,17 @@ public class DeviceControlActivity extends AppCompatActivity implements AlertFra
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
+        FragmentManager fragmentManager = getSupportFragmentManager();
+
         switch (item.getItemId()) {
-            case R.id.menu_settings:
-                FragmentManager fragmentManager = getSupportFragmentManager();
-                AlertFragment alertFragment = new AlertFragment();
-                alertFragment.show(fragmentManager, "alert");
+            case R.id.menu_change_key:
+                ChangeKeyFragment changeKeyFragment = new ChangeKeyFragment();
+                changeKeyFragment.show(fragmentManager, "change");
+                break;
+            case R.id.menu_reset_key:
+                ResetKeyFragment resetKeyFragment = new ResetKeyFragment();
+                resetKeyFragment.show(fragmentManager, "reset");
+                break;
         }
 
         return super.onOptionsItemSelected(item);

@@ -15,7 +15,12 @@
     <string name="btn_close">Zavřít bránu</string>
     <string name="btn_settings_cancel">Zrušit</string>
     <string name="btn_settings_confirm">Potvrdit</string>
-    <string name="settings_dialog_title">Zadat klíč</string>
-    <string name="settings_dialog_key">Klíč</string>
-    <string name="menu_btn_secure_key">Klíč</string>
+    <string name="change_key_dialog_title">Změnit bezpečnostní klíč</string>
+    <string name="reset_key_dialog_title">Přenastavit bezpečnostní klíč</string>
+    <string name="secure_key">Bezpečnostní klíč</string>
+    <string name="secure_key_new">Nový bezpečnostní klíč</string>
+    <string name="master_key">Master klíč</string>
+    <string name="flesh_change_key">Bezpečnostní klíč byl změněn!</string>
+    <string name="flesh_reset_key">Bezpečnostní klíč byl přenastaven!</string>
+    <string name="flesh_change_key_empty">Bezpečnostní klíč nesmí být prázdný!</string>
 </resources>

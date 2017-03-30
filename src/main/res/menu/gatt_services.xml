@@ -2,8 +2,15 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <item android:id="@+id/menu_settings"
-          android:title="@string/menu_btn_secure_key"
+    <item android:id="@+id/menu_change_key"
+          android:title="@string/change_key_dialog_title"
           android:orderInCategory="100"
-          app:showAsAction="ifRoom|withText"/>
+          android:icon="@android:drawable/ic_lock_idle_lock"
+          app:showAsAction="never"/>
+
+    <item android:id="@+id/menu_reset_key"
+          android:title="@string/reset_key_dialog_title"
+          android:orderInCategory="100"
+          android:icon="@android:drawable/ic_lock_idle_lock"
+          app:showAsAction="never"/>
 </menu>

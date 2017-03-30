@@ -47,7 +47,7 @@
             style="@style/BtnConnect"/>
 
         <android.support.v7.widget.AppCompatButton
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="10dp"
             android:text="@string/btn_disconnect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

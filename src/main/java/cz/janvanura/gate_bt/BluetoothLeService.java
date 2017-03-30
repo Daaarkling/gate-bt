@@ -25,11 +25,16 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import java.util.UUID;
@@ -47,18 +52,23 @@ public class BluetoothLeService extends Service {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
-    private Handler mStopScanningHandler;
+    private Handler mHandler = new Handler();
+    private final IBinder mBinder = new LocalBinder();
 
     private int mConnectionState = STATE_DISCONNECTED;
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
+    private static final int SCAN_PERIOD = 1000;
 
     public final static String ACTION_GATT_CONNECTED = "cz.janvanura.gate-bt.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_CONNECTING = "cz.janvanura.gate-bt.ACTION_GATT_CONNECTING";
     public final static String ACTION_GATT_DISCONNECTED = "cz.janvanura.gate-bt.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_NOTHING_FOUND = "cz.janvanura.gate-bt.ACTION_GATT_NOTHING_FOUND";
     public final static String ACTION_GATT_WRITE = "cz.janvanura.gate-bt.ACTION_GATT_WRITE";
+    public final static String ACTION_DATA_AVAILABLE = "cz.janvanura.gate-bt.ACTION_DATA_AVAILABLE";
+    public final static String EXTRA_DATA = "cz.janvanura.gate-bt.EXTRA_DATA";
+
 
 
 
@@ -100,10 +110,41 @@ public class BluetoothLeService extends Service {
                 Log.w(TAG, "Write Failed: " + status);
             }
         }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+        }
     };
 
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
+        sendBroadcast(intent);
+    }
+
+    private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic) {
+
+        final Intent intent = new Intent(action);
+        final byte[] data = characteristic.getValue();
+
+        Log.d(TAG, "data.length: " + data.length);
+
+        if (data.length > 0) {
+            final StringBuilder stringBuilder = new StringBuilder(data.length);
+            for(byte byteChar : data) {
+                stringBuilder.append(String.format("%02X ", byteChar));
+            }
+            String dataString = new String(data);
+            Log.d(TAG, "Reading: " + dataString);
+            intent.putExtra(EXTRA_DATA, dataString);
+        }
         sendBroadcast(intent);
     }
 
@@ -128,7 +169,7 @@ public class BluetoothLeService extends Service {
         return super.onUnbind(intent);
     }
 
-    private final IBinder mBinder = new LocalBinder();
+
 
     /**
      * Initializes a reference to the local Bluetooth adapter.
@@ -155,15 +196,67 @@ public class BluetoothLeService extends Service {
         return true;
     }
 
+    @RequiresApi(21)
+    private void scanLeDevice21() {
 
-    private void startScanning() {
+        final BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+
+        final ScanCallback mLeScanCallback = new ScanCallback() {
+
+            @Override
+            public void onScanResult(int callbackType, ScanResult result) {
+                super.onScanResult(callbackType, result);
+
+                BluetoothDevice device = result.getDevice();
+                if (device.getAddress().equals(mBluetoothDeviceAddress)) {
+                    bluetoothLeScanner.stopScan(this);
+                    conn(device.getAddress());
+                }
+            }
+
+            @Override
+            public void onScanFailed(int errorCode) {
+                super.onScanFailed(errorCode);
+                Log.d(TAG, "Scanning failed");
+            }
+        };
 
         // Stops scanning after a pre-defined scan period.
-        mStopScanningHandler = new Handler();
-        mStopScanningHandler.postDelayed(new Runnable() {
+        mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                stopScanning();
+                bluetoothLeScanner.stopScan(mLeScanCallback);
+                Log.i(TAG, "No devices found.");
+            }
+        }, SCAN_PERIOD);
+
+        bluetoothLeScanner.startScan(mLeScanCallback);
+    }
+
+
+    /**
+     * Scan BLE devices on Android API 18 to 20
+     */
+    private void scanLeDevice18() {
+
+        final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
+
+                    @Override
+                    public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+                        if (device.getAddress().equals(mBluetoothDeviceAddress)) {
+                            mBluetoothAdapter.stopLeScan(this);
+                            mHandler.removeCallbacksAndMessages(null);
+                            conn(device.getAddress());
+                        }
+                    }
+                };
+
+        // Stops scanning after a pre-defined scan period.
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                broadcastUpdate(ACTION_GATT_NOTHING_FOUND);
                 Log.i(TAG, "No devices found.");
             }
         }, 10000);
@@ -171,32 +264,6 @@ public class BluetoothLeService extends Service {
         mBluetoothAdapter.startLeScan(mLeScanCallback);
         Log.d(TAG, "Scanning started");
     }
-
-
-    private void stopScanning() {
-        try {
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
-            broadcastUpdate(ACTION_GATT_NOTHING_FOUND);
-            Log.d(TAG, "Scanning stopped");
-        } catch (NullPointerException exception) {
-            Log.e(TAG, "Can't stop scan. Unexpected NullPointerException", exception);
-        }
-    }
-
-
-    // Device scan callback.
-    private BluetoothAdapter.LeScanCallback mLeScanCallback =
-            new BluetoothAdapter.LeScanCallback() {
-
-                @Override
-                public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
-                    if (device.getAddress().equals(mBluetoothDeviceAddress)) {
-                        stopScanning();
-                        mStopScanningHandler.removeCallbacksAndMessages(null);
-                        conn(device.getAddress());
-                    }
-                }
-            };
 
 
     public void connect(final String address){
@@ -207,7 +274,11 @@ public class BluetoothLeService extends Service {
         Log.i(TAG, "Connecting to GATT server.");
         broadcastUpdate(ACTION_GATT_CONNECTING);
 
-        startScanning();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            scanLeDevice21();
+        } else {
+            scanLeDevice18();
+        }
     }
 
 
@@ -286,6 +357,22 @@ public class BluetoothLeService extends Service {
     }
 
 
+    public void readCharacteristic() {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+
+        BluetoothGattCharacteristic characteristic = findCharacteristic(GattAttributes.UUID_CHAR);
+
+        if (characteristic == null) {
+            Log.w(TAG, "Could not find characteristic");
+            return;
+        }
+
+        mBluetoothGatt.readCharacteristic(characteristic);
+    }
+
 
     public void writeCharacteristic(String data) {
 
@@ -300,12 +387,13 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "Could not find characteristic");
             return;
         }
-
+        mBluetoothGatt.setCharacteristicNotification(characteristic, true);
         Log.i(TAG, "characteristic " + characteristic.toString());
         Log.i(TAG, "data " + data);
         characteristic.setValue(data);
         mBluetoothGatt.writeCharacteristic(characteristic);
     }
+
 
     public BluetoothGattCharacteristic findCharacteristic(final UUID uuid) {
 

@@ -17,12 +17,12 @@
     <LinearLayout android:orientation="vertical"
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
-                  android:layout_margin="10dp">
+                  android:layout_margin="0dp">
 
         <LinearLayout android:orientation="horizontal"
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
-                      android:layout_margin="10dp">
+                      android:layout_margin="0dp">
             <TextView android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
                       android:text="@string/label_state"
@@ -55,7 +55,7 @@
             style="@style/BtnDisconnect"/>
 
         <android.support.v7.widget.AppCompatButton
-            android:layout_marginTop="25dp"
+            android:layout_marginTop="15dp"
             android:text="@string/btn_open"
             android:layout_width="match_parent"
             android:layout_height="60dp"
@@ -64,7 +64,7 @@
             style="@style/BtnOpen"/>
 
         <android.support.v7.widget.AppCompatButton
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
             android:text="@string/btn_close"
             android:layout_width="match_parent"
             android:layout_height="60dp"
