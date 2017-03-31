@@ -18,7 +18,22 @@ package cz.janvanura.gate_bt;
 
 import java.util.UUID;
 
-
+/**
+ * Arduino side
+ *
+ * Commands:
+ *  m:secure_key:1                   -> open gate
+ *  m:secure_key:0                   -> close gate
+ *  c:master_key:new_secure_key      -> change secure key
+ *
+ * Answers:
+ *  ok:m:1                           -> open gate ok
+ *  ok:m:0                           -> close gate ok
+ *  ok:c:secure_key                  -> secure key was change
+ *  err:secure                       -> wrong secure key
+ *  err:master                       -> wrong master key
+ *  err:length                       -> length of secure key is equal to 0 or greater than 10
+ */
 public class GattAttributes {
 
     public static final String GATT_CHAR = "0000ffe1-0000-1000-8000-00805f9b34fb";
@@ -29,9 +44,10 @@ public class GattAttributes {
     public static final UUID UUID_CHAR = UUID.fromString(GATT_CHAR);
     public static final UUID UUID_SERVICE = UUID.fromString(GATT_SERVICE);
 
-    public static final String SECURE_KEY = "mpc";
-    public static final String SECURE_SPLITTER = ":";
+    public static final String SECURE_KEY = "0000";
 
-    public final static String COMMAND_OPEN = "1";
-    public final static String COMMAND_CLOSE = "0";
+    public static final String CMD_MOTION = "m";
+    public static final String CMD_CHANGE = "c";
+    public final static String VALUE_OPEN = "1";
+    public final static String VALUE_CLOSE = "0";
 }

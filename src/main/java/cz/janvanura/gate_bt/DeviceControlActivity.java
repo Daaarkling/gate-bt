@@ -56,6 +56,7 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
     private static final int REQUEST_ENABLE_BT = 1;
     private String mSecureKey = GattAttributes.SECURE_KEY;
 
+    private MenuItem mMenuItemResetKey;
     private Button mBtnOpen, mBtnClose, mBtnConnect, mBtnDisconnect;
 
 
@@ -108,23 +109,27 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
                 updateConnectionState(R.string.disconnected);
                 enableDisableButtons();
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                String data = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
-                resolveDataAvailable(data);
+                String answer = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
+                resolveDataAvailable(answer);
             }
         }
     };
 
 
-    private void resolveDataAvailable(String data) {
+    private void resolveDataAvailable(String answer) {
 
-        String[] msg = data.split(":");
-
-        if (msg[0].equals("reset")) {
-            String key = data.split(":")[1];
+        if (answer.equals("ok:m:1")) {
+            Toast.makeText(DeviceControlActivity.this, R.string.flesh_opening, Toast.LENGTH_SHORT).show();
+        } else if (answer.equals("ok:m:0")) {
+            Toast.makeText(DeviceControlActivity.this, R.string.flesh_closing, Toast.LENGTH_SHORT).show();
+        } else if (answer.contains("ok:c")) {
+            String key = answer.split(":")[2];
             changeSecureKey(key);
-            Toast.makeText(DeviceControlActivity.this, R.string.flesh_change_key, Toast.LENGTH_SHORT).show();
-        } else if (msg[0].equals("error")) {
-            Toast.makeText(DeviceControlActivity.this, msg[1], Toast.LENGTH_SHORT).show();
+            Toast.makeText(DeviceControlActivity.this, R.string.flesh_reset_key, Toast.LENGTH_SHORT).show();
+        } else if (answer.equals("err:secure")) {
+            Toast.makeText(DeviceControlActivity.this, R.string.flesh_err_secure, Toast.LENGTH_SHORT).show();
+        } else if (answer.equals("err:master")) {
+            Toast.makeText(DeviceControlActivity.this, R.string.flesh_err_master, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -133,9 +138,11 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
         if (mConnected) {
             mBtnConnect.setVisibility(View.GONE);
             mBtnDisconnect.setVisibility(View.VISIBLE);
+            if (mMenuItemResetKey != null) mMenuItemResetKey.setEnabled(true);
         } else {
             mBtnConnect.setVisibility(View.VISIBLE);
             mBtnDisconnect.setVisibility(View.GONE);
+            if (mMenuItemResetKey != null) mMenuItemResetKey.setEnabled(false);
         }
         mBtnOpen.setEnabled(mConnected);
         mBtnClose.setEnabled(mConnected);
@@ -207,8 +214,8 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
             @Override
             public void onClick(View v) {
                 if (mConnected){
-                    mBluetoothLeService.writeCharacteristic(concatStrings(mSecureKey, GattAttributes.COMMAND_OPEN));
-                    Log.d(TAG, "Writing data: " + GattAttributes.COMMAND_OPEN);
+                    mBluetoothLeService.writeCharacteristic(concatStrings(GattAttributes.CMD_MOTION, mSecureKey, GattAttributes.VALUE_OPEN));
+                    Log.d(TAG, "Writing data: " + GattAttributes.VALUE_OPEN);
                 }
             }
         });
@@ -217,15 +224,15 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
             @Override
             public void onClick(View v) {
                 if (mConnected) {
-                    mBluetoothLeService.writeCharacteristic(concatStrings(mSecureKey, GattAttributes.COMMAND_CLOSE));
-                    Log.d(TAG, "Writing data: " + GattAttributes.COMMAND_CLOSE);
+                    mBluetoothLeService.writeCharacteristic(concatStrings(GattAttributes.CMD_MOTION, mSecureKey, GattAttributes.VALUE_CLOSE));
+                    Log.d(TAG, "Writing data: " + GattAttributes.VALUE_CLOSE);
                 }
             }
         });
     }
 
-    private String concatStrings(String key, String cmd) {
-        return key + GattAttributes.SECURE_SPLITTER + cmd;
+    private String concatStrings(String cmd, String key, String value) {
+        return cmd + ":" + key + ":" + value;
     }
 
 
@@ -263,7 +270,7 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
             return;
         }
 
-        mBluetoothLeService.writeCharacteristic(concatStrings(masterKey, secureKey));
+        mBluetoothLeService.writeCharacteristic(concatStrings(GattAttributes.CMD_CHANGE, masterKey, secureKey));
     }
 
     @Override
@@ -351,6 +358,13 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.gatt_services, menu);
+        mMenuItemResetKey = menu.findItem(R.id.menu_reset_key);
+        if (mConnected) {
+            mMenuItemResetKey.setEnabled(true);
+        } else {
+            mMenuItemResetKey.setEnabled(false);
+        }
+
         return super.onCreateOptionsMenu(menu);
     }
 

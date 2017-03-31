@@ -20,7 +20,14 @@
     <string name="secure_key">Bezpečnostní klíč</string>
     <string name="secure_key_new">Nový bezpečnostní klíč</string>
     <string name="master_key">Master klíč</string>
-    <string name="flesh_change_key">Bezpečnostní klíč byl změněn!</string>
-    <string name="flesh_reset_key">Bezpečnostní klíč byl přenastaven!</string>
     <string name="flesh_change_key_empty">Bezpečnostní klíč nesmí být prázdný!</string>
+    <string name="flesh_opening">Brána se otevírá.</string>
+    <string name="flesh_closing">Brána se zavírá.</string>
+    <string name="flesh_change_key">Bezpečnostní klíč byl změněn.</string>
+    <string name="flesh_reset_key">Bezpečnostní klíč byl přenastaven.</string>
+    <string name="flesh_err_secure">Bezpečnostní klíč není správný!</string>
+    <string name="flesh_err_master">Master klíč není správný!</string>
+    <string name="flesh_err_input_secure">Délka bezpečnostního klíče musí být větší než nula a menší než deset!</string>
+    <string name="flesh_err_input_master">Master klíč nesmí být prázdný!</string>
+    <string name="flesh_err_invalid_char">Vstup nesmí obsahovat dvojtečku (:)!</string>
 </resources>

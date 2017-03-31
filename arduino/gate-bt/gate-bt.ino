@@ -1,6 +1,27 @@
 #include <SoftwareSerial.h>
 #include <EEPROM.h>
 
+/*
+ * Gate BT
+ * -------
+ * 
+ * App for manipulating electric gate via ble (Bluetooth Low Energy)
+ * 
+ * Commands:
+ *  m:secure_key:1                   -> open gate
+ *  m:secure_key:0                   -> close gate
+ *  c:master_key:new_secure_key      -> change secure key
+ *  
+ * Answers:
+ *  ok:m:1                           -> open gate ok
+ *  ok:m:0                           -> close gate ok
+ *  ok:c:secure_key                  -> secure key was change
+ *  err:secure                       -> wrong secure key
+ *  err:master                       -> wrong master key
+ *  err:length                       -> length of secure key is equal to 0 or greater than 10
+ */
+
+
 // Absolute min and max eeprom addresses. Actual values are hardware-dependent.
 // These values can be changed e.g. to protect eeprom cells outside this range.
 const int EEPROM_MIN_ADDR = 0;
@@ -10,13 +31,13 @@ const int EEPROM_MAX_ADDR = 11;
 const int MAX_SECURE_KEY_SIZE = 10;
 char buf[MAX_SECURE_KEY_SIZE];
 const String MASTER_KEY = "12345";
-const char SECURE_SPLITTER = ':';
-String SECURE_KEY = "mpc";
-
+String SECURE_KEY = "0000";
 
 // Commands for controling gate
-const String CMD_OPEN = "1";
-const String CMD_CLOSE = "0";
+const String CMD_MOTION = "m";
+const String CMD_CHANGE = "c";
+const String VALUE_OPEN = "1";
+const String VALUE_CLOSE = "0";
 
 // GATE_OPEN & GATE_CLOSE pin 4 and 5
 const int GATE_OPEN = 4;
@@ -32,7 +53,7 @@ void setup() {
   pinMode(GATE_OPEN, OUTPUT);
   pinMode(GATE_CLOSE, OUTPUT);
 
-  // Turn off
+  // Turn off relay (reverse logic)
   digitalWrite(GATE_OPEN, HIGH);  
   digitalWrite(GATE_CLOSE, HIGH);  
   
@@ -49,35 +70,41 @@ void loop() {
     // Read input string sent by connected device
     String input = Bluetooth.readString();
 
-    // Split input into 2 parts
-    String key = split(input, SECURE_SPLITTER, 0);
-    String operation = split(input, SECURE_SPLITTER, 1);
+    // Split input into 3 parts
+    String cmd = split(input, ':', 0);
+    String key = split(input, ':', 1);
+    String value = split(input, ':', 2);
 
-    // If first part is master key, change secure key
-    if(key == MASTER_KEY) {
-      boolean result = changeSecureKey(operation);
-      if(result){
-        Bluetooth.print("reset:" + operation);
+    // If cmd part is 'c' -> change secure key
+    if(cmd == CMD_CHANGE) {
+      if(key == MASTER_KEY) {
+        
+        boolean result = changeSecureKey(value);
+        if(result){
+          Bluetooth.print("ok:c:" + value);
+        } else {
+          Bluetooth.print("err:length");
+        }
       } else {
-        Bluetooth.print("error:length");
+        Bluetooth.print("err:master");
       }
-      return;
     }
     
-    // If first part is not master key or secure key, error 
-    if (key != SECURE_KEY) {
-      Bluetooth.print("error:secure");
-      return;
-    }
-    
-    if (operation == CMD_OPEN) {
-      openGate(2000);
-      Bluetooth.print("ok:" + CMD_OPEN);
-    }  
-   
-    if (operation == CMD_CLOSE) {  
-      closeGate(2000);
-      Bluetooth.print("ok:" + CMD_CLOSE);
+    // If cmd part is 'm' -> open/close gate
+    if(cmd == CMD_MOTION) {
+      if (key != SECURE_KEY) {
+        Bluetooth.print("err:secure");
+        return;
+      }
+      
+      if (value == VALUE_OPEN) {
+        openGate(2000);
+        Bluetooth.print("ok:m:" + value);
+      }  
+      else if (value == VALUE_CLOSE) {  
+        closeGate(2000);
+        Bluetooth.print("ok:m:" + value);
+      }
     }
   }
 }
@@ -99,7 +126,7 @@ boolean changeSecureKey(String key) {
   
   char keyChar[MAX_SECURE_KEY_SIZE];
 
-  if(key.length() + 1 > MAX_SECURE_KEY_SIZE) {
+  if(key.length() == 0 || key.length() + 1 > MAX_SECURE_KEY_SIZE) {
     return false;
   }
   
