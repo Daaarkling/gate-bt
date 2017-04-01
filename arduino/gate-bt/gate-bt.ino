@@ -16,6 +16,7 @@
  *  ok:m:1                           -> open gate ok
  *  ok:m:0                           -> close gate ok
  *  ok:c:secure_key                  -> secure key was change
+ *  err:m:value                      -> unknown value of motion command
  *  err:secure                       -> wrong secure key
  *  err:master                       -> wrong master key
  *  err:length                       -> length of secure key is equal to 0 or greater than 10
@@ -100,10 +101,11 @@ void loop() {
       if (value == VALUE_OPEN) {
         openGate(2000);
         Bluetooth.print("ok:m:" + value);
-      }  
-      else if (value == VALUE_CLOSE) {  
+      } else if (value == VALUE_CLOSE) {  
         closeGate(2000);
         Bluetooth.print("ok:m:" + value);
+      } else {
+        Bluetooth.print("err:m:" + value);
       }
     }
   }
