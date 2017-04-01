@@ -55,7 +55,6 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
     private boolean mConnected = false;
     private static final int REQUEST_ENABLE_BT = 1;
     private String mSecureKey = GattAttributes.SECURE_KEY;
-
     private MenuItem mMenuItemResetKey;
     private Button mBtnOpen, mBtnClose, mBtnConnect, mBtnDisconnect;
 
@@ -194,8 +193,6 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
         mBtnOpen = (Button) findViewById(R.id.btn_open);
         mBtnClose = (Button) findViewById(R.id.btn_close);
 
-        enableDisableButtons();
-
         mBtnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -289,6 +286,8 @@ public class DeviceControlActivity extends AppCompatActivity implements ChangeKe
         if (mBluetoothLeService != null && mBluetoothAdapter.isEnabled()) {
             mBluetoothLeService.connect(GattAttributes.MAC_ADDRESS);
         }
+
+        enableDisableButtons();
     }
 
 

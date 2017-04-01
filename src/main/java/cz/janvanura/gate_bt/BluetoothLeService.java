@@ -59,7 +59,7 @@ public class BluetoothLeService extends Service {
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
-    private static final int SCAN_PERIOD = 1000;
+    private static final int SCAN_PERIOD = 10000;
 
     public final static String ACTION_GATT_CONNECTED = "cz.janvanura.gate-bt.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_CONNECTING = "cz.janvanura.gate-bt.ACTION_GATT_CONNECTING";
@@ -87,7 +87,6 @@ public class BluetoothLeService extends Service {
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" + mBluetoothGatt.discoverServices());
-
             } else if (newState == BluetoothProfile.STATE_CONNECTING) {
                 intentAction = ACTION_GATT_CONNECTING;
                 mConnectionState = STATE_CONNECTING;
@@ -196,90 +195,7 @@ public class BluetoothLeService extends Service {
         return true;
     }
 
-    @RequiresApi(21)
-    private void scanLeDevice21() {
 
-        final BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-
-        final ScanCallback mLeScanCallback = new ScanCallback() {
-
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) {
-                super.onScanResult(callbackType, result);
-
-                BluetoothDevice device = result.getDevice();
-                if (device.getAddress().equals(mBluetoothDeviceAddress)) {
-                    bluetoothLeScanner.stopScan(this);
-                    conn(device.getAddress());
-                }
-            }
-
-            @Override
-            public void onScanFailed(int errorCode) {
-                super.onScanFailed(errorCode);
-                Log.d(TAG, "Scanning failed");
-            }
-        };
-
-        // Stops scanning after a pre-defined scan period.
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                bluetoothLeScanner.stopScan(mLeScanCallback);
-                Log.i(TAG, "No devices found.");
-            }
-        }, SCAN_PERIOD);
-
-        bluetoothLeScanner.startScan(mLeScanCallback);
-    }
-
-
-    /**
-     * Scan BLE devices on Android API 18 to 20
-     */
-    private void scanLeDevice18() {
-
-        final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
-
-                    @Override
-                    public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
-                        if (device.getAddress().equals(mBluetoothDeviceAddress)) {
-                            mBluetoothAdapter.stopLeScan(this);
-                            mHandler.removeCallbacksAndMessages(null);
-                            conn(device.getAddress());
-                        }
-                    }
-                };
-
-        // Stops scanning after a pre-defined scan period.
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                mBluetoothAdapter.stopLeScan(mLeScanCallback);
-                broadcastUpdate(ACTION_GATT_NOTHING_FOUND);
-                Log.i(TAG, "No devices found.");
-            }
-        }, 10000);
-
-        mBluetoothAdapter.startLeScan(mLeScanCallback);
-        Log.d(TAG, "Scanning started");
-    }
-
-
-    public void connect(final String address){
-
-        mBluetoothDeviceAddress = address;
-
-        mConnectionState = STATE_CONNECTING;
-        Log.i(TAG, "Connecting to GATT server.");
-        broadcastUpdate(ACTION_GATT_CONNECTING);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            scanLeDevice21();
-        } else {
-            scanLeDevice18();
-        }
-    }
 
 
     /**
@@ -292,7 +208,7 @@ public class BluetoothLeService extends Service {
      *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      *         callback.
      */
-    private boolean conn(final String address) {
+    public boolean connect(final String address) {
 
         if (mBluetoothAdapter == null || address == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
@@ -305,6 +221,7 @@ public class BluetoothLeService extends Service {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             if (mBluetoothGatt.connect()) {
                 mConnectionState = STATE_CONNECTING;
+                broadcastUpdate(ACTION_GATT_CONNECTING);
                 return true;
             } else {
                 return false;
@@ -320,14 +237,13 @@ public class BluetoothLeService extends Service {
         // We want to directly connect to the device, so we are setting the autoConnect
         // parameter to false.
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        broadcastUpdate(ACTION_GATT_CONNECTING);
         Log.d(TAG, "Trying to create a new connection.");
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;
         return true;
     }
 
-
-    
 
 
     /**
